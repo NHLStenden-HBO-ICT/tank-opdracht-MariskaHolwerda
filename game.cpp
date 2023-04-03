@@ -137,6 +137,7 @@ void Game::update(float deltaTime)
     }
 
     //Check tank collision and nudge tanks away from each other
+    //complexiteit is n2 hier valt de meeste winst te halen, kijk naar de data structuur
     for (Tank& tank : tanks)
     {
         if (tank.active)
