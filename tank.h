@@ -23,6 +23,7 @@ class Tank
     float get_collision_radius() const { return collision_radius; };
     bool rocket_reloaded() const { return reloaded; };
 
+    //route berekenen; route wordt 1x berekend
     void set_route(const std::vector<vec2>& route);
     void reload_rocket();
 
@@ -35,6 +36,7 @@ class Tank
 
     void push(vec2 direction, float magnitude);
 
+    //position bekijken
     vec2 position;
     vec2 speed;
     vec2 target;
