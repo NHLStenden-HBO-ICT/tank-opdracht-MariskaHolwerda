@@ -136,66 +136,29 @@ namespace Tmpl8
     
     // Use A* search to find the shortest route to the destination
 
-  // ***** Define a struct for the A* search nodes *****
     struct AStarNode {
         float position_x;
         float position_y;
-        float g_score; 
+        float g_score;
         float f_score;
-        AStarNode* came_from;
+        std::shared_ptr<AStarNode> came_from;
 
-        AStarNode(float x, float y, float g, float f, AStarNode* prev) : position_x(x), position_y(y), g_score(g), f_score(f), came_from(prev) {}
+        AStarNode(float x, float y, float g, float f, std::shared_ptr<AStarNode> prev)
+            : position_x(x), position_y(y), g_score(g), f_score(f), came_from(prev) {}
     };
 
-    // ***** Define a comparator for the priority queue in the A* algorithm *****
     struct AStarNodeComparator {
-        bool operator()(const AStarNode* a, const AStarNode* b) const {
-            return a->f_score < b->f_score;
+        bool operator()(const std::shared_ptr<AStarNode>& a, const std::shared_ptr<AStarNode>& b) const {
+            return a->f_score > b->f_score;
         }
     };
 
-    // Heuristic function to estimate the cost from a node to the goal 
     float Terrain::heuristic(float currentX1, float currentY1, float exitX2, float exitY2) {
         float goalX = std::abs(exitX2 - currentX1);
         float goalY = std::abs(exitY2 - currentY1);
-        return goalX + goalY;  // Manhattan distance, omdat met het berekenen van de wortel van de som, het programma vastliep
+        return goalX + goalY; // Manhattan distance
     }
-
-    // ***** quicksort functionality
-	// Swap two vec2 elements
-    void swap(vec2& a, vec2& b) {
-        vec2 temp = a;
-        a = b;
-        b = temp;
-    }
-
-    // Partition the vector and return the pivot index
-    int partition(std::vector<vec2>& arr, int low, int high) {
-        vec2 pivot = arr[high];
-        int i = low - 1;
-
-        for (int j = low; j <= high - 1; j++) {
-            if (arr[j].x <= pivot.x) {                       
-                i++;
-                swap(arr[i], arr[j]);
-            }
-        }
-
-        swap(arr[i + 1], arr[high]);
-        return i + 1;
-    }
-
-    // Quicksort recursive functionality
-    void quicksort(std::vector<vec2>& arr, int low, int high) {
-        if (low < high) {
-            int pivot = partition(arr, low, high);
-
-            quicksort(arr, low, pivot - 1);
-            quicksort(arr, pivot + 1, high);
-        }
-    }
-
-    // ***** quicksort functionality end
+ 
 
     std::vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target) {
         const size_t pos_x = tank.position.x / sprite_size;
@@ -204,14 +167,14 @@ namespace Tmpl8
         const size_t target_x = target.x / sprite_size;
         const size_t target_y = target.y / sprite_size;
 
-        std::priority_queue<AStarNode*, std::vector<AStarNode*>, AStarNodeComparator> queue;
-        AStarNode* start_node = new AStarNode(pos_x, pos_y, 0.0f, 0.0f, nullptr);
+        std::priority_queue<std::shared_ptr<AStarNode>, std::vector<std::shared_ptr<AStarNode>>, AStarNodeComparator> queue;
+        std::shared_ptr<AStarNode> start_node = std::make_shared<AStarNode>(pos_x, pos_y, 0.0f, 0.0f, nullptr);
         queue.push(start_node);
 
         std::vector<std::vector<bool>> visited(tiles.size(), std::vector<bool>(tiles[0].size(), false));
 
         bool route_found = false;
-        AStarNode* current_node = nullptr;
+        std::shared_ptr<AStarNode> current_node = nullptr;
 
         while (!queue.empty() && !route_found) {
             current_node = queue.top();
@@ -224,24 +187,21 @@ namespace Tmpl8
 
             visited[current_node->position_y][current_node->position_x] = true;
 
-
-
             for (TerrainTile* exit : tiles[current_node->position_y][current_node->position_x].exits) {
-                if (visited[exit->position_y][exit->position_x]){
+                if (visited[exit->position_y][exit->position_x]) {
                     continue;
                 }
 
-                float new_g_score = current_node->g_score + 1;// current_node->g_score + heuristic(current_node->position_x, current_node->position_y, exit->position_x, exit->position_y);
+                float new_g_score = current_node->g_score + 1;
                 float new_f_score = new_g_score + heuristic(exit->position_x, exit->position_y, target_x, target_y);
 
-
-                AStarNode* neighbor = new AStarNode(exit->position_x, exit->position_y, new_g_score, new_f_score, current_node);
+                std::shared_ptr<AStarNode> neighbor = std::make_shared<AStarNode>(
+                    exit->position_x, exit->position_y, new_g_score, new_f_score, current_node);
                 queue.push(neighbor);
             }
         }
 
         std::vector<vec2> route;
- 
 
         if (route_found) {
             while (current_node != nullptr) {
@@ -250,93 +210,13 @@ namespace Tmpl8
             }
 
             std::reverse(route.begin(), route.end());
-            quicksort(route, 0, route.size() - 1);
-            
-        }
-     
-
-        while (!queue.empty()) {
-            delete queue.top();
-            queue.pop();
         }
 
         return route;
     }
 
     
-
-    /*
-          
-    //Use Breadth-first search to find shortest route to the destination
-    vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target)
-    {
-        //Find start and target tile
-        const size_t pos_x = tank.position.x / sprite_size;
-        const size_t pos_y = tank.position.y / sprite_size;
-
-        const size_t target_x = target.x / sprite_size;
-        const size_t target_y = target.y / sprite_size;
-
-        //Init queue with start tile
-        std::queue<vector<TerrainTile*>> queue;
-        queue.emplace();
-        queue.back().push_back(&tiles.at(pos_y).at(pos_x));
-
-        std::vector<TerrainTile*> visited;
-
-        bool route_found = false;
-        vector<TerrainTile*> current_route;
-        while (!queue.empty() && !route_found)
-        {
-            current_route = queue.front();
-            queue.pop();
-            TerrainTile* current_tile = current_route.back();
-
-            //Check all exits, if target then done, else if unvisited push a new partial route
-            for (TerrainTile * exit : current_tile->exits)
-            {
-                if (exit->position_x == target_x && exit->position_y == target_y)
-                {
-                    current_route.push_back(exit);
-                    route_found = true;
-                    break;
-                }
-                else if (!exit->visited)
-                {
-                    exit->visited = true;
-                    visited.push_back(exit);
-                    queue.push(current_route);
-                    queue.back().push_back(exit);
-                }
-            }
-        }
-
-        //Reset tiles
-        for (TerrainTile * tile : visited)
-        {
-            tile->visited = false;
-        }
-
-        if (route_found)
-        {
-            //Convert route to vec2 to prevent dangling pointers
-            std::vector<vec2> route;
-            for (TerrainTile* tile : current_route)
-            {
-                route.push_back(vec2((float)tile->position_x * sprite_size, (float)tile->position_y * sprite_size));
-            }
-
-            return route;
-        }
-        else
-        {
-            return  std::vector<vec2>();
-        }
-
-    }
-    
-
-    */
+// einde astar implementatie
 
     //TODO: Function not used, convert BFS to dijkstra and take speed into account next year :)
     float Terrain::get_speed_modifier(const vec2& position) const

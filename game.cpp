@@ -15,8 +15,9 @@ constexpr auto health_bar_width = 70;
 constexpr auto max_frames = 2000;
 
 //Global performance timer
-constexpr auto REF_PERFORMANCE = 505934 ; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames) was 612515, na get route a* 505934
-                                            // na sorting tanks health met binair algorithm -> 677870 (oeps)
+constexpr auto REF_PERFORMANCE = 962407; //na a star en 2048 tanks
+//33726.1 met 204 tanks na aanpassing a star en verwijderen sorting algorithm daaruit
+
 static timer perf_timer;
 static float duration;
 
@@ -140,8 +141,6 @@ void Game::update(float deltaTime)
 
     //Check tank collision and nudge tanks away from each other
 
-    /*
-    //oorspronkelijk
     for (Tank& tank : tanks)
     {
         if (tank.active)
@@ -162,34 +161,9 @@ void Game::update(float deltaTime)
                 }
             }
         }
-    }*/
-
-    //Check tank collision and nudge tanks away from each other
-    //aangepast
-    for (int i = 0; i < tanks.size(); i++) {
-        Tank& tank = tanks[i];
-        if (!tank.active) {
-            continue;
-        }
-
-        for (int j = i + 1; j < tanks.size(); j++) {
-            Tank& other_tank = tanks[j];
-            if (!other_tank.active) {
-                continue;
-            }
-
-            vec2 dir = tank.get_position() - other_tank.get_position();
-            float dir_squared_len = dir.sqr_length();
-
-            float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
-            col_squared_len *= col_squared_len;
-
-            if (dir_squared_len < col_squared_len) {
-                tank.push(dir.normalized(), 1.f);
-                other_tank.push(-dir.normalized(), 1.f);
-            }
-        }
     }
+
+
 
     //Update tanks
     for (Tank& tank : tanks)
@@ -235,42 +209,18 @@ void Game::update(float deltaTime)
  
     
     //Find left most tank position
-    //for (Tank& tank : tanks)
-    //{
-    //    if (tank.active)
-    //    {
-    //        if (tank.position.x <= point_on_hull.x)
-    //        {
-    //            point_on_hull = tank.position;
-    //        }
-    //    }
-    //}
-
-    // Find left most tank position - binary search 
-    int low = 0;
-    int high = tanks.size() - 1;
-    int leftmostIndex = -1;
-    float targetX = point_on_hull.x;
-
-    while (low <= high)
+    for (Tank& tank : tanks)
     {
-        int mid = (low + high) / 2;
-
-        if (tanks[mid].active && tanks[mid].position.x <= targetX)
+        if (tank.active)
         {
-            leftmostIndex = mid;
-            high = mid - 1;
-        }
-        else
-        {
-            low = mid + 1;
+            if (tank.position.x <= point_on_hull.x)
+            {
+                point_on_hull = tank.position;
+            }
         }
     }
 
-    if (leftmostIndex != -1)
-    {
-        point_on_hull = tanks[leftmostIndex].position;
-    }
+
 
 
     //Calculate convex hull for 'rocket barrier' 
@@ -436,56 +386,7 @@ void Game::draw()
     }
 }
 
-// -----------------------------------------------------------
-// Sort tanks by health value using a binairy algorithm - aangepast
-// -----------------------------------------------------------
 
-void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end)
-{
-    const int NUM_TANKS = end - begin;
-    sorted_tanks.reserve(NUM_TANKS);
-    sorted_tanks.emplace_back(&original.at(begin));
-
-    for (int i = begin + 1; i < (begin + NUM_TANKS); i++)
-    {
-        const Tank& current_tank = original.at(i);
-
-        int insertion_index = -1; // Default to -1 if no valid insertion index is found
-
-        // Perform a binary search to find the correct insertion index based on health comparison
-        int low = 0;
-        int high = sorted_tanks.size() - 1;
-        while (low <= high)
-        {
-            int mid = (low + high) / 2;
-            const Tank* checking_tank = sorted_tanks[mid];
-            if (checking_tank->compare_health(current_tank) <= 0)
-            {
-                // Insert after the current tank
-                insertion_index = mid;
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
-        }
-
-        if (insertion_index == -1)
-        {
-            // Insert at the beginning of the sorted list
-            sorted_tanks.insert(sorted_tanks.begin(), &current_tank);
-        }
-        else
-        {
-            // Insert after the tank at the found insertion index
-            sorted_tanks.insert(sorted_tanks.begin() + insertion_index + 1, &current_tank);
-        }
-    }
-}
-
-
-/*
  
 // -----------------------------------------------------------
 // Sort tanks by health value using insertion sort - oorspronkelijk
@@ -519,7 +420,6 @@ void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original,
         }
     }
 }
-*/
 
 
 
