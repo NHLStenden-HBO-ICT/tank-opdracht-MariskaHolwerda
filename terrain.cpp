@@ -128,6 +128,53 @@ namespace Tmpl8
         }
     }
 
+    // ZOEKOPDRACHT MET A*
+
+    vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target)
+    {
+        //Find start and target tile
+        const size_t pos_x = tank.position.x / sprite_size;
+        const size_t pos_y = tank.position.y / sprite_size;
+
+        const size_t target_x = target.x / sprite_size;
+        const size_t target_y = target.y / sprite_size;
+
+        //Init queue with start tile
+        std::queue<vector<TerrainTile*>> queue;
+        queue.emplace();
+        queue.back().push_back(&tiles.at(pos_y).at(pos_x));
+
+        std::vector<TerrainTile*> visited;
+
+        bool route_found = false;
+        vector<TerrainTile*> current_route;
+        while (!queue.empty() && !route_found)
+        {
+            current_route = queue.front();
+            queue.pop();
+            TerrainTile* current_tile = current_route.back();
+
+            //Check all exits, if target then done, else if unvisited push a new partial route
+            for (TerrainTile* exit : current_tile->exits)
+            {
+                if (exit->position_x == target_x && exit->position_y == target_y)
+                {
+                    current_route.push_back(exit);
+                    route_found = true;
+                    break;
+                }
+                else if (!exit->visited)
+                {
+                    exit->visited = true;
+                    visited.push_back(exit);
+                    queue.push(current_route);
+                    queue.back().push_back(exit);
+                }
+            }
+
+            // EINDE VERBETERING
+
+/* ORIGINELE CODE
     //Use Breadth-first search to find shortest route to the destination
     vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target)
     {
@@ -170,60 +217,62 @@ namespace Tmpl8
                     queue.back().push_back(exit);
                 }
             }
-        }
 
-        //Reset tiles
-        for (TerrainTile * tile : visited)
-        {
-            tile->visited = false;
-        }
-
-        if (route_found)
-        {
-            //Convert route to vec2 to prevent dangling pointers
-            std::vector<vec2> route;
-            for (TerrainTile* tile : current_route)
+*/
+//Reset tiles
+            for (TerrainTile* tile : visited)
             {
-                route.push_back(vec2((float)tile->position_x * sprite_size, (float)tile->position_y * sprite_size));
+                tile->visited = false;
             }
 
-            return route;
-        }
-        else
-        {
-            return  std::vector<vec2>();
-        }
+            if (route_found)
+            {
+                //Convert route to vec2 to prevent dangling pointers
+                std::vector<vec2> route;
+                for (TerrainTile* tile : current_route)
+                {
+                    route.push_back(vec2((float)tile->position_x * sprite_size, (float)tile->position_y * sprite_size));
+                }
 
-    }
+                return route;
+            }
+            else
+            {
+                return  std::vector<vec2>();
+            }
 
-    //TODO: Function not used, convert BFS to dijkstra and take speed into account next year :)
-    float Terrain::get_speed_modifier(const vec2& position) const
-    {
-        const size_t pos_x = position.x / sprite_size;
-        const size_t pos_y = position.y / sprite_size;
-
-        switch (tiles.at(pos_y).at(pos_x).tile_type)
-        {
-        case TileType::GRASS:
-            return 1.0f;
-            break;
-        case TileType::FORREST:
-            return 0.5f;
-            break;
-        case TileType::ROCKS:
-            return 0.75f;
-            break;
-        case TileType::MOUNTAINS:
-            return 0.0f;
-            break;
-        case TileType::WATER:
-            return 0.0f;
-            break;
-        default:
-            return 1.0f;
-            break;
         }
     }
+
+        //TODO: Function not used, convert BFS to dijkstra and take speed into account next year :)
+        float Terrain::get_speed_modifier(const vec2 & position) const
+        {
+            const size_t pos_x = position.x / sprite_size;
+            const size_t pos_y = position.y / sprite_size;
+
+            switch (tiles.at(pos_y).at(pos_x).tile_type)
+            {
+            case TileType::GRASS:
+                return 1.0f;
+                break;
+            case TileType::FORREST:
+                return 0.5f;
+                break;
+            case TileType::ROCKS:
+                return 0.75f;
+                break;
+            case TileType::MOUNTAINS:
+                return 0.0f;
+                break;
+            case TileType::WATER:
+                return 0.0f;
+                break;
+            default:
+                return 1.0f;
+                break;
+            }
+        }
+    
 
     bool Terrain::is_accessible(int y, int x)
     {
