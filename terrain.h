@@ -38,6 +38,8 @@ namespace Tmpl8
         //Use Breadth-first search to find shortest route to the destination
         vector<vec2> get_route(const Tank& tank, const vec2& target);
 
+        float heuristic(float currentX1, float currentY1, float exitX2, float exitY2);
+
         float get_speed_modifier(const vec2& position) const;
 
 
