@@ -148,22 +148,22 @@ void Game::update(float deltaTime)
         if (!tank.active) continue;
 
         for (int j = i + 1; j < tanks.size(); j++)
-    {
+        {
             Tank& other_tank = tanks[j];
             if (!other_tank.active) continue;
 
-                vec2 dir = tank.get_position() - other_tank.get_position();
-                float dir_squared_len = dir.sqr_length();
+            vec2 dir = tank.get_position() - other_tank.get_position();
+            float dir_squared_len = dir.sqr_length();
 
-                float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
-                col_squared_len *= col_squared_len;
+            float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
+            col_squared_len *= col_squared_len;
 
-                if (dir_squared_len < col_squared_len)
-                {
-                    tank.push(dir.normalized(), 1.f);
-                }
+            if (dir_squared_len < col_squared_len)
+            {
+                tank.push(dir.normalized(), 1.f);
             }
         }
+    }
 
     //*** oorspronkelijk ***
     //for (Tank& tank : tanks)

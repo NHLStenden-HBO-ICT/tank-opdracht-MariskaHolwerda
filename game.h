@@ -43,6 +43,33 @@ class Game
     { /* implement if you want to handle keys */
     }
 
+    //(MH) Find algortihm
+#ifndef ADJACENT_FIND_H
+#define ADJACENT_FIND_H
+
+    template <typename ForwardIterator>
+    ForwardIterator adjacent_find(ForwardIterator first, ForwardIterator last)
+    {
+        if (first == last) {
+            return last;
+        }
+
+        ForwardIterator next = first;
+        ++next;
+
+        while (next != last) {
+            if (*first == *next) {
+                return first;
+            }
+            ++first;
+            ++next;
+        }
+
+        return last;
+    }
+
+#endif // ADJACENT_FIND_H
+
   private:
     Surface* screen;
 
