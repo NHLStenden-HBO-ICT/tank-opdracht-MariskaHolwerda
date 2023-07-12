@@ -1,8 +1,8 @@
 #include "precomp.h" // include (only) this in every .cpp file
 #include <vector>
 
-constexpr auto num_tanks_blue = 204; //aantal aangepast ipv 2048
-constexpr auto num_tanks_red = 204; //aantal aangepast ipv 2048
+constexpr auto num_tanks_blue = 2048; //aantal aangepast ipv 2048
+constexpr auto num_tanks_red = 2048; //aantal aangepast ipv 2048
 
 constexpr auto tank_max_health = 1000;
 constexpr auto rocket_hit_value = 60;
@@ -16,8 +16,9 @@ constexpr auto max_frames = 2000;
 
 //Global performance timer
 constexpr auto REF_PERFORMANCE = 962407; //na a star en 2048 tanks
-//33726.1 met 204 tanks na aanpassing a star en verwijderen sorting algorithm daaruit
-
+										 //30329.7  met 204 tanks na a star  2de poging zonder wijzigingen 29956.3
+									     // 28566.1 na verbetering van (geen algoritme gebruikt)  //Check tank collision and nudge tanks away from each other
+										//28239.8 na aanpassing met find algoritme  en 599156 met 2048 tanks
 static timer perf_timer;
 static float duration;
 
@@ -129,7 +130,7 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 // -----------------------------------------------------------
 void Game::update(float deltaTime)
 {
-    //Calculate the route to the destination for each tank using BFS
+    //Calculate the route to the destination for each tank using BFS => (MH) de get_route functie is nu gebaseerd op A* 
     //Initializing routes here so it gets counted for performance..
     if (frame_count == 0)
     {
@@ -140,14 +141,16 @@ void Game::update(float deltaTime)
     }
 
     //Check tank collision and nudge tanks away from each other
-
-    for (Tank& tank : tanks)
+    //(MH) aangepast zodat alleen tanks die na de loop binnenkomen worden gecheckt, dit zorgt dat elk paar maar 1x wordt gecheckt.
+    for (int i = 0; i < tanks.size(); i++)
     {
-        if (tank.active)
-        {
-            for (Tank& other_tank : tanks)
-            {
-                if (&tank == &other_tank || !other_tank.active) continue;
+        Tank& tank = tanks[i];
+        if (!tank.active) continue;
+
+        for (int j = i + 1; j < tanks.size(); j++)
+    {
+            Tank& other_tank = tanks[j];
+            if (!other_tank.active) continue;
 
                 vec2 dir = tank.get_position() - other_tank.get_position();
                 float dir_squared_len = dir.sqr_length();
@@ -161,7 +164,29 @@ void Game::update(float deltaTime)
                 }
             }
         }
-    }
+
+    //*** oorspronkelijk ***
+    //for (Tank& tank : tanks)
+    //{
+    //    if (tank.active)
+    //    {
+    //        for (Tank& other_tank : tanks)
+    //        {
+    //            if (&tank == &other_tank || !other_tank.active) continue;
+
+    //            vec2 dir = tank.get_position() - other_tank.get_position();
+    //            float dir_squared_len = dir.sqr_length();
+
+    //            float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
+    //            col_squared_len *= col_squared_len;
+
+    //            if (dir_squared_len < col_squared_len)
+    //            {
+    //                tank.push(dir.normalized(), 1.f);
+    //            }
+    //        }
+    //    }
+    //}
 
 
 
@@ -362,14 +387,42 @@ void Game::draw()
         explosion.draw(screen);
     }
 
+    //TODO: (MH) test met find algorithm => in game.h file
+
+
+    //originele code
     //Draw forcefield (mostly for debugging, its kinda ugly..)
-    for (size_t i = 0; i < forcefield_hull.size(); i++)
+    /*for (size_t i = 0; i < forcefield_hull.size(); i++)
     {
         vec2 line_start = forcefield_hull.at(i);
         vec2 line_end = forcefield_hull.at((i + 1) % forcefield_hull.size());
         line_start.x += HEALTHBAR_OFFSET;
         line_end.x += HEALTHBAR_OFFSET;
         screen->line(line_start, line_end, 0x0000ff);
+    } */
+
+    //TODO: (mh) Code aangepast met index voor snelheid
+    //Draw forcefield (mostly for debugging, its kinda ugly..)
+    for (size_t i = 0; i < forcefield_hull.size(); i++)
+    {
+        vec2 line_start = forcefield_hull[i];
+        vec2 line_end = forcefield_hull[(i + 1) % forcefield_hull.size()];
+        line_start.x += HEALTHBAR_OFFSET;
+        line_end.x += HEALTHBAR_OFFSET;
+        screen->line(line_start, line_end, 0x0000ff);
+
+        auto next_index = (i + 1) % forcefield_hull.size();
+        auto found = adjacent_find(forcefield_hull.begin() + next_index, forcefield_hull.end());
+        if (found != forcefield_hull.end())
+        {
+            // Draw line connecting the last and first points of the forcefield hull
+            vec2 first_point = forcefield_hull[i];
+            vec2 last_point = *found;
+            first_point.x += HEALTHBAR_OFFSET;
+            last_point.x += HEALTHBAR_OFFSET;
+            screen->line(first_point, last_point, 0x0000ff);
+            break;  // Stop the loop since we have drawn the complete forcefield
+        }
     }
 
     //Draw sorted health bars
